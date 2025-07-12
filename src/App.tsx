@@ -48,7 +48,7 @@ const AppContent: React.FC = () => {
       <div className="flex-1 flex">
         <Sidebar isOpen={isSidebarOpen} />
         
-        <main className={`flex-1 transition-all duration-150 ease-in-out ${isSidebarOpen ? (isCollapsed ? 'lg:ml-16' : 'lg:ml-64') : 'lg:ml-16'}`}>
+        <main className={`flex-1 transition-all duration-150 ease-in-out ${isSidebarOpen ? (isCollapsed ? 'lg:ml-16' : 'lg:ml-64') : 'lg:ml-0'}`}>
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/expenses" element={<Expenses />} />

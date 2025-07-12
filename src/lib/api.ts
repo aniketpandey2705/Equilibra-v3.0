@@ -886,25 +886,52 @@ const API_BASE_URL = "http://localhost:8000/api"; // Updated to match backend po
 async function getIdToken() {
   const user = getAuth().currentUser;
   if (!user) throw new Error('Not authenticated');
-  return user.getIdToken();
+  try {
+    return await user.getIdToken();
+  } catch (error) {
+    console.error('Error getting ID token:', error);
+    throw new Error('Failed to get authentication token');
+  }
 }
 
 // EXPENSES
 export const getExpenses = async () => {
+  try {
+    const token = await getIdToken();
+    return axios.get(`${API_BASE_URL}/expenses`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch (error) {
+    console.error('Error fetching expenses:', error);
+    throw error;
+  }
+};
+
+export const addExpense = async (expense: any) => {
+  try {
+    const token = await getIdToken();
+    return axios.post(`${API_BASE_URL}/expenses`, expense, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch (error) {
+    console.error('Error adding expense:', error);
+    throw error;
+  }
+};
+
+export const updateExpense = async (id: string, expense: any) => {
   const token = await getIdToken();
-  return axios.get(`${API_BASE_URL}/expenses`, {
+  return axios.put(`${API_BASE_URL}/expenses/${id}`, expense, {
     headers: { Authorization: `Bearer ${token}` },
   });
 };
 
-export const addExpense = (expense: any) =>
-  axios.post(`${API_BASE_URL}/expenses`, expense);
-
-export const updateExpense = (id: string, expense: any) =>
-  axios.put(`${API_BASE_URL}/expenses/${id}`, expense);
-
-export const deleteExpense = (id: string) =>
-  axios.delete(`${API_BASE_URL}/expenses/${id}`);
+export const deleteExpense = async (id: string) => {
+  const token = await getIdToken();
+  return axios.delete(`${API_BASE_URL}/expenses/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
 
 // BUDGETS
 export const getBudgets = async () => {
@@ -914,14 +941,26 @@ export const getBudgets = async () => {
   });
 };
 
-export const addBudget = (budget: any) =>
-  axios.post(`${API_BASE_URL}/budgets`, budget);
+export const addBudget = async (budget: any) => {
+  const token = await getIdToken();
+  return axios.post(`${API_BASE_URL}/budgets`, budget, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
 
-export const updateBudget = (id: string, budget: any) =>
-  axios.put(`${API_BASE_URL}/budgets/${id}`, budget);
+export const updateBudget = async (id: string, budget: any) => {
+  const token = await getIdToken();
+  return axios.put(`${API_BASE_URL}/budgets/${id}`, budget, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
 
-export const deleteBudget = (id: string) =>
-  axios.delete(`${API_BASE_URL}/budgets/${id}`);
+export const deleteBudget = async (id: string) => {
+  const token = await getIdToken();
+  return axios.delete(`${API_BASE_URL}/budgets/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
 
 // JOURNAL ENTRIES
 export const getJournalEntries = async () => {
@@ -931,14 +970,26 @@ export const getJournalEntries = async () => {
   });
 };
 
-export const addJournalEntry = (entry: any) =>
-  axios.post(`${API_BASE_URL}/journal-entries`, entry);
+export const addJournalEntry = async (entry: any) => {
+  const token = await getIdToken();
+  return axios.post(`${API_BASE_URL}/journal-entries`, entry, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
 
-export const updateJournalEntry = (id: string, entry: any) =>
-  axios.put(`${API_BASE_URL}/journal-entries/${id}`, entry);
+export const updateJournalEntry = async (id: string, entry: any) => {
+  const token = await getIdToken();
+  return axios.put(`${API_BASE_URL}/journal-entries/${id}`, entry, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
 
-export const deleteJournalEntry = (id: string) =>
-  axios.delete(`${API_BASE_URL}/journal-entries/${id}`);
+export const deleteJournalEntry = async (id: string) => {
+  const token = await getIdToken();
+  return axios.delete(`${API_BASE_URL}/journal-entries/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
 
 // GOALS
 export const getGoals = async () => {
@@ -948,14 +999,26 @@ export const getGoals = async () => {
   });
 };
 
-export const addGoal = (goal: any) =>
-  axios.post(`${API_BASE_URL}/goals`, goal);
+export const addGoal = async (goal: any) => {
+  const token = await getIdToken();
+  return axios.post(`${API_BASE_URL}/goals`, goal, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
 
-export const updateGoal = (id: string, goal: any) =>
-  axios.put(`${API_BASE_URL}/goals/${id}`, goal);
+export const updateGoal = async (id: string, goal: any) => {
+  const token = await getIdToken();
+  return axios.put(`${API_BASE_URL}/goals/${id}`, goal, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
 
-export const deleteGoal = (id: string) =>
-  axios.delete(`${API_BASE_URL}/goals/${id}`);
+export const deleteGoal = async (id: string) => {
+  const token = await getIdToken();
+  return axios.delete(`${API_BASE_URL}/goals/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
 
 export const getRecords = async () => {
   const token = await getIdToken();

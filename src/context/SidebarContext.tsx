@@ -30,12 +30,13 @@ export const SidebarProvider: React.FC<SidebarProviderProps> = ({ children }) =>
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
 
-  // Auto-collapse sidebar when navigating to content pages
+  // Auto-collapse sidebar when navigating to content pages (only on mobile)
   useEffect(() => {
     const contentPages = ['/write', '/entries', '/expenses', '/academic', '/goals'];
     const isContentPage = contentPages.includes(location.pathname);
+    const isMobile = window.innerWidth < 1024; // lg breakpoint
     
-    if (isContentPage && !isCollapsed) {
+    if (isContentPage && !isCollapsed && isMobile) {
       setIsCollapsed(true);
     }
   }, [location.pathname, isCollapsed]);

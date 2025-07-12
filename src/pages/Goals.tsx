@@ -4,11 +4,32 @@ import { Target, CheckCircle2, Circle, Plus } from 'lucide-react';
 import { getGoals, addGoal, updateGoal, deleteGoal } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 
+interface Goal {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  targetValue: number;
+  currentValue: number;
+  isCompleted: boolean;
+  dueDate?: string;
+  progress?: number;
+  daysCompleted?: number;
+  totalDays?: number;
+}
+
 const Goals: React.FC = () => {
-  const [goals, setGoals] = useState([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const { user } = useAuth();
   const [showAddGoalModal, setShowAddGoalModal] = useState(false);
-  const [newGoal, setNewGoal] = useState({ title: '', description: '', targetDate: '' });
+  const [newGoal, setNewGoal] = useState({ 
+    title: '', 
+    description: '', 
+    category: 'personal',
+    targetValue: 100,
+    currentValue: 0,
+    dueDate: '' 
+  });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -17,12 +38,57 @@ const Goals: React.FC = () => {
     }
   }, [user]);
 
+  // Sample goals data
+  const sampleGoals = [
+    {
+      id: '1',
+      title: 'Complete React Course',
+      description: 'Finish the advanced React course on Udemy',
+      category: 'education',
+      targetValue: 100,
+      currentValue: 75,
+      isCompleted: false,
+      dueDate: '2024-02-15',
+      progress: 75,
+      daysCompleted: 15,
+      totalDays: 20
+    },
+    {
+      id: '2',
+      title: 'Save ₹50,000',
+      description: 'Save money for emergency fund',
+      category: 'finance',
+      targetValue: 50000,
+      currentValue: 35000,
+      isCompleted: false,
+      dueDate: '2024-03-31',
+      progress: 70,
+      daysCompleted: 45,
+      totalDays: 90
+    },
+    {
+      id: '3',
+      title: 'Run 5km Daily',
+      description: 'Build running habit for fitness',
+      category: 'health',
+      targetValue: 30,
+      currentValue: 18,
+      isCompleted: false,
+      dueDate: '2024-02-28',
+      progress: 60,
+      daysCompleted: 18,
+      totalDays: 30
+    }
+  ];
+
   const fetchGoals = async () => {
     try {
       const response = await getGoals();
       setGoals(response.data);
     } catch (error) {
       console.error('Error fetching goals:', error);
+      // Use sample data as fallback
+      setGoals(sampleGoals);
     }
   };
 
@@ -30,9 +96,21 @@ const Goals: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await addGoal({ ...newGoal, targetDate: newGoal.targetDate || undefined });
+      // Remove userId if present
+      const { userId, ...goalWithoutUserId } = newGoal as any;
+      await addGoal({ 
+        ...goalWithoutUserId, 
+        dueDate: newGoal.dueDate || undefined 
+      });
       setShowAddGoalModal(false);
-      setNewGoal({ title: '', description: '', targetDate: '' });
+      setNewGoal({ 
+        title: '', 
+        description: '', 
+        category: 'personal',
+        targetValue: 100,
+        currentValue: 0,
+        dueDate: '' 
+      });
       fetchGoals();
     } catch (error) {
       alert('Failed to add goal');
@@ -71,8 +149,22 @@ const Goals: React.FC = () => {
                   <textarea className="input w-full" value={newGoal.description} onChange={e => setNewGoal({ ...newGoal, description: e.target.value })} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Target Date</label>
-                  <input type="date" className="input w-full" value={newGoal.targetDate} onChange={e => setNewGoal({ ...newGoal, targetDate: e.target.value })} />
+                  <label className="block text-sm font-medium mb-1">Category</label>
+                  <select className="input w-full" value={newGoal.category} onChange={e => setNewGoal({ ...newGoal, category: e.target.value })}>
+                    <option value="personal">Personal</option>
+                    <option value="work">Work</option>
+                    <option value="health">Health</option>
+                    <option value="finance">Finance</option>
+                    <option value="education">Education</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Target Value</label>
+                  <input type="number" className="input w-full" value={newGoal.targetValue} onChange={e => setNewGoal({ ...newGoal, targetValue: Number(e.target.value) })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Due Date</label>
+                  <input type="date" className="input w-full" value={newGoal.dueDate} onChange={e => setNewGoal({ ...newGoal, dueDate: e.target.value })} />
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <button type="button" className="btn btn-outline" onClick={() => setShowAddGoalModal(false)}>Cancel</button>

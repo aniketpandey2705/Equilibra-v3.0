@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { getBudgets, addBudget, updateBudget } from '../../lib/api';
+import { useAuth } from '../../context/AuthContext';
 
 interface ManageBudgetModalProps {
   isOpen: boolean;
@@ -37,7 +38,7 @@ const ManageBudgetModal: React.FC<ManageBudgetModalProps> = ({
   const [budgetData, setBudgetData] = useState<BudgetData>(currentBudget);
   const [newCategory, setNewCategory] = useState('');
   const [newCategoryBudget, setNewCategoryBudget] = useState(0);
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [errors, setErrors] = useState<{[key: string]: string | undefined}>({});
   const { user } = useAuth();
 
   // Calculate remaining budget (unallocated)
@@ -154,8 +155,10 @@ const ManageBudgetModal: React.FC<ManageBudgetModalProps> = ({
 
   const fetchBudget = async () => {
     try {
-      const response = await getBudgets(user.uid);
-      // Process and set current budget
+      if (user) {
+        const response = await getBudgets();
+        // Process and set current budget
+      }
     } catch (error) {
       console.error('Error fetching budget:', error);
     }
@@ -181,7 +184,7 @@ const ManageBudgetModal: React.FC<ManageBudgetModalProps> = ({
             <div>
               <label className="block text-sm font-medium mb-1">Total Monthly Budget</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-500">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-500">₹</span>
                 <input
                   type="number"
                   value={budgetData.totalBudget || ''}
@@ -197,7 +200,7 @@ const ManageBudgetModal: React.FC<ManageBudgetModalProps> = ({
             <div>
               <label className="block text-sm font-medium mb-1">Monthly Savings Goal</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-500">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-500">₹</span>
                 <input
                   type="number"
                   value={budgetData.savingsGoal || ''}
@@ -216,7 +219,7 @@ const ManageBudgetModal: React.FC<ManageBudgetModalProps> = ({
               <h3 className="text-md font-semibold">Category Budgets</h3>
               <div className="text-sm text-surface-600 dark:text-surface-400">
                 Unallocated: <span className={unallocatedBudget < 0 ? 'text-error-500' : 'text-success-500'}>
-                  ${unallocatedBudget.toFixed(2)}
+                  ₹{unallocatedBudget.toFixed(2)}
                 </span>
               </div>
             </div>
@@ -234,7 +237,7 @@ const ManageBudgetModal: React.FC<ManageBudgetModalProps> = ({
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="relative">
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-surface-500 text-sm">$</span>
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-surface-500 text-sm">₹</span>
                         <input
                           type="number"
                           value={item.amount || ''}
@@ -289,7 +292,7 @@ const ManageBudgetModal: React.FC<ManageBudgetModalProps> = ({
               <div className="w-24">
                 <label className="block text-sm font-medium mb-1">Amount</label>
                 <div className="relative">
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-surface-500 text-sm">$</span>
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-surface-500 text-sm">₹</span>
                   <input
                     type="number"
                     value={newCategoryBudget || ''}

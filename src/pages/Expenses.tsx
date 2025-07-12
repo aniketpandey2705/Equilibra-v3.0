@@ -45,21 +45,40 @@ const Expenses: React.FC = () => {
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = useState('week');
 
+  // Sample data for demonstration
+  const sampleExpenses = [
+    { id: '1', amount: 2500, category: 'food', description: 'Grocery shopping', date: '2024-01-15', paymentMethod: 'card' },
+    { id: '2', amount: 1200, category: 'transport', description: 'Fuel for car', date: '2024-01-14', paymentMethod: 'card' },
+    { id: '3', amount: 800, category: 'entertainment', description: 'Movie tickets', date: '2024-01-13', paymentMethod: 'cash' },
+    { id: '4', amount: 1500, category: 'shopping', description: 'New clothes', date: '2024-01-12', paymentMethod: 'card' },
+    { id: '5', amount: 300, category: 'food', description: 'Restaurant dinner', date: '2024-01-11', paymentMethod: 'card' },
+  ];
+
+  const sampleCategories = [
+    { id: 'food', name: 'Food & Dining', color: '#EF4444', budget: 3000, spent: 2800 },
+    { id: 'transport', name: 'Transportation', color: '#3B82F6', budget: 2000, spent: 1200 },
+    { id: 'entertainment', name: 'Entertainment', color: '#8B5CF6', budget: 1000, spent: 800 },
+    { id: 'shopping', name: 'Shopping', color: '#10B981', budget: 1500, spent: 1500 },
+    { id: 'utilities', name: 'Utilities', color: '#F59E0B', budget: 800, spent: 600 },
+  ];
+
   // Fetch expenses and budgets
   useEffect(() => {
     if (!user) return;
     setLoading(true);
     setError(null);
+    
+    // Try to fetch from backend first, fallback to sample data
     Promise.all([
-      getExpenses().then(res => res.data),
-      getBudgets().then(res => res.data)
+      getExpenses().then(res => res.data).catch(() => sampleExpenses),
+      getBudgets().then(res => res.data).catch(() => [])
     ])
       .then(([expensesData, budgetsData]) => {
         setExpenses(expensesData);
-        // Assume budgetsData is an array, take the latest/current
-        const budget = budgetsData[0] || null;
-        if (budget) {
-          // Build categories from budget categories
+        
+        // Use sample categories if no budget data
+        if (budgetsData && budgetsData.length > 0) {
+          const budget = budgetsData[0];
           const cats: Category[] = (budget.categories || []).map((cat: any) => {
             const spent = expensesData
               .filter((e: any) => e.category === cat.category)
@@ -67,7 +86,7 @@ const Expenses: React.FC = () => {
             return {
               id: cat.category.toLowerCase(),
               name: cat.category,
-              color: '#4F46E5', // TODO: assign color per category
+              color: '#4F46E5',
               budget: cat.budget,
               spent,
             };
@@ -79,30 +98,67 @@ const Expenses: React.FC = () => {
               categoryId: cat.category.toLowerCase(),
               amount: cat.budget,
             })),
-            savingsGoal: 1000, // Placeholder
+            savingsGoal: 1000,
           });
         } else {
-          setCategories([]);
-          setCurrentBudget(null);
+          // Use sample data
+          setCategories(sampleCategories);
+          setCurrentBudget({
+            totalBudget: 8300,
+            categoryBudgets: sampleCategories.map(cat => ({
+              categoryId: cat.id,
+              amount: cat.budget,
+            })),
+            savingsGoal: 1000,
+          });
         }
       })
       .catch((err) => {
-        setError('Failed to load expenses or budgets');
+        console.error('Error loading data:', err);
+        // Use sample data as fallback
+        setExpenses(sampleExpenses);
+        setCategories(sampleCategories);
+        setCurrentBudget({
+          totalBudget: 8300,
+          categoryBudgets: sampleCategories.map(cat => ({
+            categoryId: cat.id,
+            amount: cat.budget,
+          })),
+          savingsGoal: 1000,
+        });
+        
+        // Show specific error message
+        if (err.response?.status === 401) {
+          setError('Authentication failed. Please log in again.');
+        } else if (err.message?.includes('Not authenticated')) {
+          setError('Please log in to view expenses.');
+        } else {
+          setError('Using sample data. Backend connection failed.');
+        }
       })
       .finally(() => setLoading(false));
   }, [user, showAddExpenseModal, showBudgetModal]);
 
   const handleSaveExpense = async (expenseData: ExpenseData) => {
     try {
-      await addExpense(expenseData);
+      // Remove userId if present
+      const { userId, ...expenseWithoutUserId } = expenseData as any;
+      await addExpense(expenseWithoutUserId);
       setShowAddExpenseModal(false);
       // Refetch data
       setLoading(true);
       const res = await getExpenses();
       setExpenses(res.data);
       setLoading(false);
-    } catch (err) {
-      setError('Failed to add expense');
+    } catch (err: any) {
+      console.error('Error adding expense:', err);
+      if (err.response?.status === 401) {
+        setError('Authentication failed. Please log in again.');
+      } else if (err.message?.includes('Not authenticated')) {
+        setError('Please log in to add expenses.');
+      } else {
+        setError(`Failed to add expense: ${err.message || 'Unknown error'}`);
+      }
     }
   };
 
@@ -139,8 +195,25 @@ const Expenses: React.FC = () => {
     { month: 'Jun', amount: 250 },
   ]; // Placeholder
 
-  if (loading) return <div className="p-6">Loading...</div>;
-  if (error) return <div className="p-6 text-red-500">{error}</div>;
+  if (loading) return (
+    <div className="p-6 flex items-center justify-center">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+        <span className="text-lg">Loading expenses...</span>
+      </div>
+    </div>
+  );
+  
+  if (error) return (
+    <div className="p-6">
+      <div className="text-center">
+        <div className="text-red-500 text-lg mb-2">⚠️ {error}</div>
+        <p className="text-surface-600 dark:text-surface-400 mb-4">
+          Showing sample data for demonstration. Connect to backend for real data.
+        </p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="p-6">
