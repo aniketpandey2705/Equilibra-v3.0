@@ -881,7 +881,7 @@ export const dashboardAPI = {
 
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:5000/api"; // Change if your backend runs elsewhere
+const API_BASE_URL = "http://localhost:8000/api"; // Updated to match backend port
 
 async function getIdToken() {
   const user = getAuth().currentUser;
@@ -956,6 +956,20 @@ export const updateGoal = (id: string, goal: any) =>
 
 export const deleteGoal = (id: string) =>
   axios.delete(`${API_BASE_URL}/goals/${id}`);
+
+export const getRecords = async () => {
+  const token = await getIdToken();
+  return axios.get(`${API_BASE_URL}/academic`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
+
+export const addRecord = async (record: any) => {
+  const token = await getIdToken();
+  return axios.post(`${API_BASE_URL}/academic`, record, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
 
 export const createOrFetchUserInBackend = async () => {
   const user = getAuth().currentUser;

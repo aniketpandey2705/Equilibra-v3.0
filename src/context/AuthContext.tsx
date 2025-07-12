@@ -8,6 +8,7 @@ import {
   onAuthStateChanged,
   User as FirebaseUser,
 } from 'firebase/auth';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
   user: FirebaseUser | null;
@@ -23,6 +24,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -67,7 +69,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     setLoading(true);
     await firebaseSignOut(auth);
+    setUser(null);
     setLoading(false);
+    navigate('/auth');
   };
 
   return (

@@ -7,6 +7,9 @@ import { useAuth } from '../context/AuthContext';
 const Goals: React.FC = () => {
   const [goals, setGoals] = useState([]);
   const { user } = useAuth();
+  const [showAddGoalModal, setShowAddGoalModal] = useState(false);
+  const [newGoal, setNewGoal] = useState({ title: '', description: '', targetDate: '' });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -16,10 +19,25 @@ const Goals: React.FC = () => {
 
   const fetchGoals = async () => {
     try {
-      const response = await getGoals(user.uid);
+      const response = await getGoals();
       setGoals(response.data);
     } catch (error) {
       console.error('Error fetching goals:', error);
+    }
+  };
+
+  const handleAddGoal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await addGoal({ ...newGoal, targetDate: newGoal.targetDate || undefined });
+      setShowAddGoalModal(false);
+      setNewGoal({ title: '', description: '', targetDate: '' });
+      fetchGoals();
+    } catch (error) {
+      alert('Failed to add goal');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -33,12 +51,37 @@ const Goals: React.FC = () => {
               Track your progress and set new writing goals
             </p>
           </div>
-          
-          <button className="btn btn-primary flex items-center gap-2">
+          <button className="btn btn-primary flex items-center gap-2" onClick={() => setShowAddGoalModal(true)}>
             <Plus size={18} />
             New Goal
           </button>
         </div>
+        {/* Add Goal Modal */}
+        {showAddGoalModal && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-surface-800 rounded-xl p-6 max-w-md w-full shadow-xl">
+              <h2 className="text-xl font-bold mb-4">Add New Goal</h2>
+              <form onSubmit={handleAddGoal} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Title</label>
+                  <input type="text" className="input w-full" value={newGoal.title} onChange={e => setNewGoal({ ...newGoal, title: e.target.value })} required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Description</label>
+                  <textarea className="input w-full" value={newGoal.description} onChange={e => setNewGoal({ ...newGoal, description: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Target Date</label>
+                  <input type="date" className="input w-full" value={newGoal.targetDate} onChange={e => setNewGoal({ ...newGoal, targetDate: e.target.value })} />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button type="button" className="btn btn-outline" onClick={() => setShowAddGoalModal(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? 'Adding...' : 'Add Goal'}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
         
         <motion.div 
           className="space-y-4"

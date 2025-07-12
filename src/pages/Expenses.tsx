@@ -1,53 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { DollarSign, Plus, Filter, Calendar, Tag, ArrowUpRight, ArrowDownRight, Wallet, PiggyBank, Settings } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { DollarSign, Plus, Wallet, PiggyBank, Settings, ArrowUpRight } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import AddExpenseModal from '../components/expenses/AddExpenseModal';
 import ManageBudgetModal from '../components/expenses/ManageBudgetModal';
+import { getExpenses, addExpense, getBudgets } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 
-// Sample data for expenses by day
-const expenseData = [
-  { date: 'Mon', amount: 45 },
-  { date: 'Tue', amount: 30 },
-  { date: 'Wed', amount: 65 },
-  { date: 'Thu', amount: 25 },
-  { date: 'Fri', amount: 55 },
-  { date: 'Sat', amount: 40 },
-  { date: 'Sun', amount: 35 },
-];
-
-// Enhanced category data with budget allocations
-const categoryData = [
-  { name: 'Food', value: 35, color: '#4F46E5', budget: 200, spent: 175 },
-  { name: 'Transport', value: 25, color: '#0D9488', budget: 150, spent: 125 },
-  { name: 'Entertainment', value: 20, color: '#F59E0B', budget: 100, spent: 100 },
-  { name: 'Shopping', value: 15, color: '#EF4444', budget: 120, spent: 75 },
-  { name: 'Utilities', value: 5, color: '#6B7280', budget: 80, spent: 25 },
-];
-
-// Savings data
-const savingsData = [
-  { month: 'Jan', amount: 100 },
-  { month: 'Feb', amount: 150 },
-  { month: 'Mar', amount: 120 },
-  { month: 'Apr', amount: 200 },
-  { month: 'May', amount: 180 },
-  { month: 'Jun', amount: 250 },
-];
-
-// Add these interfaces
 interface ExpenseData {
   amount: number;
   category: string;
   description: string;
   date: string;
   paymentMethod: string;
-}
-
-interface BudgetData {
-  totalBudget: number;
-  categoryBudgets: CategoryBudget[];
-  savingsGoal: number;
 }
 
 interface CategoryBudget {
@@ -59,55 +24,123 @@ interface Category {
   id: string;
   name: string;
   color: string;
+  budget: number;
+  spent: number;
+}
+
+interface BudgetData {
+  totalBudget: number;
+  categoryBudgets: CategoryBudget[];
+  savingsGoal: number;
 }
 
 const Expenses: React.FC = () => {
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const { user } = useAuth();
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [currentBudget, setCurrentBudget] = useState<BudgetData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = useState('week');
 
-  // Convert category data to proper format for modals
-  const categories: Category[] = categoryData.map((cat) => ({
-    id: cat.name.toLowerCase(),
+  // Fetch expenses and budgets
+  useEffect(() => {
+    if (!user) return;
+    setLoading(true);
+    setError(null);
+    Promise.all([
+      getExpenses().then(res => res.data),
+      getBudgets().then(res => res.data)
+    ])
+      .then(([expensesData, budgetsData]) => {
+        setExpenses(expensesData);
+        // Assume budgetsData is an array, take the latest/current
+        const budget = budgetsData[0] || null;
+        if (budget) {
+          // Build categories from budget categories
+          const cats: Category[] = (budget.categories || []).map((cat: any) => {
+            const spent = expensesData
+              .filter((e: any) => e.category === cat.category)
+              .reduce((sum: number, e: any) => sum + e.amount, 0);
+            return {
+              id: cat.category.toLowerCase(),
+              name: cat.category,
+              color: '#4F46E5', // TODO: assign color per category
+              budget: cat.budget,
+              spent,
+            };
+          });
+          setCategories(cats);
+          setCurrentBudget({
+            totalBudget: budget.totalBudget,
+            categoryBudgets: (budget.categories || []).map((cat: any) => ({
+              categoryId: cat.category.toLowerCase(),
+              amount: cat.budget,
+            })),
+            savingsGoal: 1000, // Placeholder
+          });
+        } else {
+          setCategories([]);
+          setCurrentBudget(null);
+        }
+      })
+      .catch((err) => {
+        setError('Failed to load expenses or budgets');
+      })
+      .finally(() => setLoading(false));
+  }, [user, showAddExpenseModal, showBudgetModal]);
+
+  const handleSaveExpense = async (expenseData: ExpenseData) => {
+    try {
+      await addExpense(expenseData);
+      setShowAddExpenseModal(false);
+      // Refetch data
+      setLoading(true);
+      const res = await getExpenses();
+      setExpenses(res.data);
+      setLoading(false);
+    } catch (err) {
+      setError('Failed to add expense');
+    }
+  };
+
+  const handleSaveBudget = () => {
+    setShowBudgetModal(false);
+    // Optionally refetch budgets
+  };
+
+  // Calculate totals
+  const totalBudget = currentBudget?.totalBudget || 0;
+  const totalSpent = categories.reduce((sum, cat) => sum + cat.spent, 0);
+  const budgetPercentage = totalBudget ? Math.round((totalSpent / totalBudget) * 100) : 0;
+  const potentialSavings = totalBudget - totalSpent;
+  const currentSavings = 450; // Placeholder
+
+  // Prepare data for charts
+  const expenseData = expenses.map((e) => ({
+    date: new Date(e.date).toLocaleDateString(),
+    amount: e.amount,
+  }));
+  const categoryData = categories.map((cat) => ({
     name: cat.name,
+    value: cat.spent,
     color: cat.color,
     budget: cat.budget,
-    spent: cat.spent
+    spent: cat.spent,
   }));
+  const savingsData = [
+    { month: 'Jan', amount: 100 },
+    { month: 'Feb', amount: 150 },
+    { month: 'Mar', amount: 120 },
+    { month: 'Apr', amount: 200 },
+    { month: 'May', amount: 180 },
+    { month: 'Jun', amount: 250 },
+  ]; // Placeholder
 
-  // Current budget data
-  const currentBudget: BudgetData = {
-    totalBudget: categoryData.reduce((sum, cat) => sum + cat.budget, 0),
-    categoryBudgets: categories.map(cat => ({
-      categoryId: cat.id,
-      amount: categoryData.find(c => c.name === cat.name)?.budget || 0
-    })),
-    savingsGoal: 1000 // Default savings goal
-  };
-
-  const handleSaveExpense = (expenseData: ExpenseData) => {
-    console.log('Saving expense:', expenseData);
-    // Here you would integrate with your backend
-    // For now, we'll just close the modal
-    setShowAddExpenseModal(false);
-  };
-
-  const handleSaveBudget = (budgetData: BudgetData) => {
-    console.log('Saving budget:', budgetData);
-    // Here you would integrate with your backend
-    // For now, we'll just close the modal
-    setShowBudgetModal(false);
-  };
-
-  // Calculate total budget and spent
-  const totalBudget = categoryData.reduce((sum, category) => sum + category.budget, 0);
-  const totalSpent = categoryData.reduce((sum, category) => sum + category.spent, 0);
-  const budgetPercentage = Math.round((totalSpent / totalBudget) * 100);
-  
-  // Calculate savings
-  const potentialSavings = totalBudget - totalSpent;
-  const currentSavings = 450; // This would come from actual data in a real app
+  if (loading) return <div className="p-6">Loading...</div>;
+  if (error) return <div className="p-6 text-red-500">{error}</div>;
 
   return (
     <div className="p-6">
@@ -119,7 +152,6 @@ const Expenses: React.FC = () => {
               Track, budget, and optimize your spending
             </p>
           </div>
-          
           <div className="flex gap-3">
             <button 
               onClick={() => setShowBudgetModal(true)}
@@ -137,100 +169,103 @@ const Expenses: React.FC = () => {
             </button>
           </div>
         </div>
+        {expenses.length === 0 ? (
+          <div className="text-center text-lg text-surface-500 py-12">No expenses found.</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-6">
+            <motion.div 
+              className="card"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm text-surface-600 dark:text-surface-400">Total Spent</p>
+                  <h3 className="text-2xl font-bold">₹{totalSpent.toFixed(2)}</h3>
+                </div>
+                <div className="p-3 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+                  <DollarSign className="text-primary-600 dark:text-primary-400" size={24} />
+                </div>
+              </div>
+              <div className="flex items-center text-sm">
+                <ArrowUpRight className="text-error-500 mr-1" size={16} />
+                <span className="text-error-500 font-medium">12%</span>
+                <span className="text-surface-600 dark:text-surface-400 ml-1">vs last week</span>
+              </div>
+            </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-6">
-          <motion.div 
-            className="card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm text-surface-600 dark:text-surface-400">Total Spent</p>
-                <h3 className="text-2xl font-bold">${totalSpent.toFixed(2)}</h3>
+            <motion.div 
+              className="card"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm text-surface-600 dark:text-surface-400">Monthly Budget</p>
+                  <h3 className="text-2xl font-bold">₹{totalBudget.toFixed(2)}</h3>
+                </div>
+                <div className="p-3 bg-secondary-100 dark:bg-secondary-900/30 rounded-lg">
+                  <Wallet className="text-secondary-600 dark:text-secondary-400" size={24} />
+                </div>
               </div>
-              <div className="p-3 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
-                <DollarSign className="text-primary-600 dark:text-primary-400" size={24} />
+              <div className="h-2 bg-surface-200 dark:bg-surface-700 rounded-full mt-2">
+                <div 
+                  className={`h-full rounded-full ${budgetPercentage > 80 ? 'bg-error-500' : budgetPercentage > 60 ? 'bg-warning-500' : 'bg-success-500'}`}
+                  style={{ width: `${Math.min(budgetPercentage, 100)}%` }}
+                ></div>
               </div>
-            </div>
-            <div className="flex items-center text-sm">
-              <ArrowUpRight className="text-error-500 mr-1" size={16} />
-              <span className="text-error-500 font-medium">12%</span>
-              <span className="text-surface-600 dark:text-surface-400 ml-1">vs last week</span>
-            </div>
-          </motion.div>
+              <div className="flex justify-between mt-1 text-xs text-surface-600 dark:text-surface-400">
+                <span>₹{totalSpent.toFixed(2)} spent</span>
+                <span>₹{(totalBudget - totalSpent).toFixed(2)} remaining</span>
+              </div>
+            </motion.div>
 
-          <motion.div 
-            className="card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm text-surface-600 dark:text-surface-400">Monthly Budget</p>
-                <h3 className="text-2xl font-bold">${totalBudget.toFixed(2)}</h3>
+            <motion.div 
+              className="card"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm text-surface-600 dark:text-surface-400">Current Savings</p>
+                  <h3 className="text-2xl font-bold">₹{currentSavings.toFixed(2)}</h3>
+                </div>
+                <div className="p-3 bg-accent-100 dark:bg-accent-900/30 rounded-lg">
+                  <PiggyBank className="text-accent-600 dark:text-accent-400" size={24} />
+                </div>
               </div>
-              <div className="p-3 bg-secondary-100 dark:bg-secondary-900/30 rounded-lg">
-                <Wallet className="text-secondary-600 dark:text-secondary-400" size={24} />
+              <div className="flex items-center text-sm">
+                <span className="text-success-500 font-medium mr-1">+₹{potentialSavings.toFixed(2)}</span>
+                <span className="text-surface-600 dark:text-surface-400">potential savings this month</span>
               </div>
-            </div>
-            <div className="h-2 bg-surface-200 dark:bg-surface-700 rounded-full mt-2">
-              <div 
-                className={`h-full rounded-full ${budgetPercentage > 80 ? 'bg-error-500' : budgetPercentage > 60 ? 'bg-warning-500' : 'bg-success-500'}`}
-                style={{ width: `${Math.min(budgetPercentage, 100)}%` }}
-              ></div>
-            </div>
-            <div className="flex justify-between mt-1 text-xs text-surface-600 dark:text-surface-400">
-              <span>${totalSpent.toFixed(2)} spent</span>
-              <span>${(totalBudget - totalSpent).toFixed(2)} remaining</span>
-            </div>
-          </motion.div>
+            </motion.div>
 
-          <motion.div 
-            className="card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm text-surface-600 dark:text-surface-400">Current Savings</p>
-                <h3 className="text-2xl font-bold">${currentSavings.toFixed(2)}</h3>
+            <motion.div 
+              className="card"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm text-surface-600 dark:text-surface-400">Budget Status</p>
+                  <h3 className="text-2xl font-bold">{budgetPercentage}%</h3>
+                </div>
+                <div className="p-3 bg-success-100 dark:bg-success-900/30 rounded-lg">
+                  <DollarSign className="text-success-600 dark:text-success-400" size={24} />
+                </div>
               </div>
-              <div className="p-3 bg-accent-100 dark:bg-accent-900/30 rounded-lg">
-                <PiggyBank className="text-accent-600 dark:text-accent-400" size={24} />
+              <div className="h-2 bg-surface-200 dark:bg-surface-700 rounded-full">
+                <div 
+                  className={`h-full rounded-full ${budgetPercentage > 80 ? 'bg-error-500' : budgetPercentage > 60 ? 'bg-warning-500' : 'bg-success-500'}`}
+                  style={{ width: `${Math.min(budgetPercentage, 100)}%` }}
+                ></div>
               </div>
-            </div>
-            <div className="flex items-center text-sm">
-              <span className="text-success-500 font-medium mr-1">+${potentialSavings.toFixed(2)}</span>
-              <span className="text-surface-600 dark:text-surface-400">potential savings this month</span>
-            </div>
-          </motion.div>
-
-          <motion.div 
-            className="card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm text-surface-600 dark:text-surface-400">Budget Status</p>
-                <h3 className="text-2xl font-bold">{budgetPercentage}%</h3>
-              </div>
-              <div className="p-3 bg-success-100 dark:bg-success-900/30 rounded-lg">
-                <DollarSign className="text-success-600 dark:text-success-400" size={24} />
-              </div>
-            </div>
-            <div className="h-2 bg-surface-200 dark:bg-surface-700 rounded-full">
-              <div 
-                className={`h-full rounded-full ${budgetPercentage > 80 ? 'bg-error-500' : budgetPercentage > 60 ? 'bg-warning-500' : 'bg-success-500'}`}
-                style={{ width: `${Math.min(budgetPercentage, 100)}%` }}
-              ></div>
-            </div>
-          </motion.div>
-        </div>
+            </motion.div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <motion.div 
@@ -317,7 +352,7 @@ const Expenses: React.FC = () => {
                     <span className="text-sm">{category.name}</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-sm font-medium">${category.spent} / ${category.budget}</span>
+                    <span className="text-sm font-medium">₹{category.spent} / ₹{category.budget}</span>
                     <div className="h-1 w-16 bg-surface-200 dark:bg-surface-700 rounded-full mt-1">
                       <div 
                         className={`h-full rounded-full ${(category.spent/category.budget) > 0.8 ? 'bg-error-500' : (category.spent/category.budget) > 0.6 ? 'bg-warning-500' : 'bg-success-500'}`}
@@ -371,15 +406,15 @@ const Expenses: React.FC = () => {
           <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 bg-surface-50 dark:bg-surface-800 rounded-xl">
               <p className="text-sm text-surface-600 dark:text-surface-400">Total Saved</p>
-              <h3 className="text-xl font-bold mt-1">${currentSavings.toFixed(2)}</h3>
+              <h3 className="text-xl font-bold mt-1">₹{currentSavings.toFixed(2)}</h3>
             </div>
             <div className="p-4 bg-surface-50 dark:bg-surface-800 rounded-xl">
               <p className="text-sm text-surface-600 dark:text-surface-400">Potential Savings</p>
-              <h3 className="text-xl font-bold mt-1">${potentialSavings.toFixed(2)}</h3>
+              <h3 className="text-xl font-bold mt-1">₹{potentialSavings.toFixed(2)}</h3>
             </div>
             <div className="p-4 bg-surface-50 dark:bg-surface-800 rounded-xl">
               <p className="text-sm text-surface-600 dark:text-surface-400">Savings Goal</p>
-              <h3 className="text-xl font-bold mt-1">$1,000.00</h3>
+              <h3 className="text-xl font-bold mt-1">₹1,000.00</h3>
               <div className="h-1 bg-surface-200 dark:bg-surface-700 rounded-full mt-2">
                 <div 
                   className="h-full bg-success-500 rounded-full"
@@ -404,7 +439,7 @@ const Expenses: React.FC = () => {
           onClose={() => setShowBudgetModal(false)}
           onSave={handleSaveBudget}
           categories={categories}
-          currentBudget={currentBudget}
+          currentBudget={currentBudget || { totalBudget: 0, categoryBudgets: [], savingsGoal: 0 }}
         />
       </div>
     </div>
