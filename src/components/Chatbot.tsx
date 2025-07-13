@@ -18,7 +18,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Hello! I\'m your AI assistant. How can I help you today?',
+      text: 'Hi there! BriLow here. How can I help you with the Equilibria dashboard overview and analytics page today? Are you looking to understand a particular metric, customize your view, or something else? Let me know!',
       sender: 'bot',
       timestamp: new Date()
     }
@@ -112,7 +112,8 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
       const data = await response.json();
       
       if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-        return data.candidates[0].content.parts[0].text;
+        // Always prepend BriLow persona intro
+        return `Hi there! BriLow here. ${data.candidates[0].content.parts[0].text}`;
       } else {
         throw new Error('Invalid response format');
       }
@@ -146,8 +147,8 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
                 <Bot size={20} className="text-primary-500" />
               </div>
               <div>
-                <h3 className="font-semibold text-surface-900 dark:text-surface-100">AI Assistant</h3>
-                <p className="text-xs text-surface-500">Powered by Gemini</p>
+                <h3 className="font-semibold text-surface-900 dark:text-surface-100">BriLow</h3>
+                <p className="text-xs text-surface-500">Your AI Assistant • dashboard overview and analytics</p>
               </div>
             </div>
             <button
@@ -168,13 +169,13 @@ const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
                 className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] p-3 rounded-2xl ${
+                  className={`max-w-[80%] p-3 rounded-2xl shadow-sm border ${
                     message.sender === 'user'
                       ? 'bg-primary-500 text-white'
-                      : 'bg-surface-100 dark:bg-surface-700 text-surface-900 dark:text-surface-100'
+                      : 'bg-surface-200 dark:bg-surface-700 text-surface-900 dark:text-surface-100 border-surface-300 dark:border-surface-600'
                   }`}
                 >
-                  <p className="text-sm">{message.text}</p>
+                  <p className="text-sm whitespace-pre-line">{message.text}</p>
                   <p className="text-xs opacity-70 mt-1">
                     {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>

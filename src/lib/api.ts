@@ -1041,3 +1041,10 @@ export const createOrFetchUserInBackend = async () => {
   const res = await axios.post(`${API_BASE_URL}/users`, { idToken });
   return res.data;
 };
+
+export const analyzeJournalContent = async (content: string) => {
+  const token = await getIdToken();
+  return axios.post(`${API_BASE_URL}/analyze-journal`, { content }, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};

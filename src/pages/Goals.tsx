@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Target, CheckCircle2, Circle, Plus } from 'lucide-react';
-import { getGoals, addGoal, updateGoal, deleteGoal } from '../lib/api';
+import { goalAPI } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 
 interface Goal {
@@ -83,11 +83,17 @@ const Goals: React.FC = () => {
 
   const fetchGoals = async () => {
     try {
-      const response = await getGoals();
-      setGoals(response.data);
+      if (!user) return;
+      const result = await goalAPI.getGoals(user.uid);
+      let goals: Goal[] = [];
+      if (Array.isArray(result)) {
+        goals = result;
+      } else if (result && Array.isArray(result.goals)) {
+        goals = result.goals;
+      }
+      // Ensure all goals have a string id
+      setGoals(goals.filter(g => typeof g.id === 'string' && g.id));
     } catch (error) {
-      console.error('Error fetching goals:', error);
-      // Use sample data as fallback
       setGoals(sampleGoals);
     }
   };
@@ -96,20 +102,21 @@ const Goals: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Remove userId if present
-      const { userId, ...goalWithoutUserId } = newGoal as any;
-      await addGoal({ 
-        ...goalWithoutUserId, 
-        dueDate: newGoal.dueDate || undefined 
+      if (!user) return;
+      await goalAPI.createGoal({
+        id: String(Date.now()), // ensure id is a string
+        userId: user.uid,
+        ...newGoal,
+        dueDate: newGoal.dueDate || undefined
       });
       setShowAddGoalModal(false);
-      setNewGoal({ 
-        title: '', 
-        description: '', 
+      setNewGoal({
+        title: '',
+        description: '',
         category: 'personal',
         targetValue: 100,
         currentValue: 0,
-        dueDate: '' 
+        dueDate: ''
       });
       fetchGoals();
     } catch (error) {

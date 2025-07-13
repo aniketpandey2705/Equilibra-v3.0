@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { GraduationCap, Book, Clock, Award, TrendingUp, TrendingDown } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { getRecords, addRecord } from '../lib/api';
+import { academicAPI } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 
 const performanceData = [
@@ -85,11 +85,17 @@ const Academic: React.FC = () => {
 
   const fetchRecords = async () => {
     try {
-      const response = await getRecords();
-      setRecords(response.data);
+      if (!user) return;
+      const result = await academicAPI.getRecords(user.uid);
+      let records: AcademicRecord[] = [];
+      if (Array.isArray(result)) {
+        records = result;
+      } else if (result && Array.isArray(result.records)) {
+        records = result.records;
+      }
+      // Ensure all records have a string id
+      setRecords(records.filter(r => typeof r.id === 'string' && r.id));
     } catch (error) {
-      console.error('Error fetching records:', error);
-      // Use sample data as fallback
       setRecords(sampleRecords);
     }
   };
@@ -98,9 +104,15 @@ const Academic: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Remove userId if present
-      const { userId, ...recordWithoutUserId } = newRecord as any;
-      await addRecord({ ...recordWithoutUserId, score: Number(newRecord.score), maxScore: Number(newRecord.maxScore), year: Number(newRecord.year) });
+      if (!user) return;
+      await academicAPI.createRecord({
+        userId: user.uid,
+        subject: newRecord.subject,
+        score: Number(newRecord.score),
+        maxScore: Number(newRecord.maxScore),
+        semester: newRecord.semester,
+        year: Number(newRecord.year)
+      });
       setShowAddRecordModal(false);
       setNewRecord({ subject: '', score: '', maxScore: '', semester: '', year: '' });
       fetchRecords();

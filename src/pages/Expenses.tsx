@@ -4,7 +4,7 @@ import { DollarSign, Plus, Wallet, PiggyBank, Settings, ArrowUpRight } from 'luc
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import AddExpenseModal from '../components/expenses/AddExpenseModal';
 import ManageBudgetModal from '../components/expenses/ManageBudgetModal';
-import { getExpenses, addExpense, getBudgets } from '../lib/api';
+import { expenseAPI } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 
 interface ExpenseData {
@@ -41,6 +41,7 @@ const Expenses: React.FC = () => {
   const [currentBudget, setCurrentBudget] = useState<BudgetData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = useState('week');
@@ -60,6 +61,9 @@ const Expenses: React.FC = () => {
     { id: 'entertainment', name: 'Entertainment', color: '#8B5CF6', budget: 1000, spent: 800 },
     { id: 'shopping', name: 'Shopping', color: '#10B981', budget: 1500, spent: 1500 },
     { id: 'utilities', name: 'Utilities', color: '#F59E0B', budget: 800, spent: 600 },
+    { id: 'healthcare', name: 'Healthcare', color: '#EC4899', budget: 500, spent: 300 },
+    { id: 'education', name: 'Education', color: '#06B6D4', budget: 1000, spent: 800 },
+    { id: 'housing', name: 'Housing', color: '#84CC16', budget: 5000, spent: 5000 },
   ];
 
   // Fetch expenses and budgets
@@ -68,54 +72,23 @@ const Expenses: React.FC = () => {
     setLoading(true);
     setError(null);
     
-    // Try to fetch from backend first, fallback to sample data
-    Promise.all([
-      getExpenses().then(res => res.data).catch(() => sampleExpenses),
-      getBudgets().then(res => res.data).catch(() => [])
-    ])
-      .then(([expensesData, budgetsData]) => {
+    const fetchData = async () => {
+      try {
+        const userId = user?.uid;
+        if (!userId) return;
+        const { expenses: expensesData } = await expenseAPI.getExpenses(userId);
         setExpenses(expensesData);
-        
-        // Use sample categories if no budget data
-        if (budgetsData && budgetsData.length > 0) {
-          const budget = budgetsData[0];
-          const cats: Category[] = (budget.categories || []).map((cat: any) => {
-            const spent = expensesData
-              .filter((e: any) => e.category === cat.category)
-              .reduce((sum: number, e: any) => sum + e.amount, 0);
-            return {
-              id: cat.category.toLowerCase(),
-              name: cat.category,
-              color: '#4F46E5',
-              budget: cat.budget,
-              spent,
-            };
-          });
-          setCategories(cats);
-          setCurrentBudget({
-            totalBudget: budget.totalBudget,
-            categoryBudgets: (budget.categories || []).map((cat: any) => ({
-              categoryId: cat.category.toLowerCase(),
-              amount: cat.budget,
-            })),
-            savingsGoal: 1000,
-          });
-        } else {
-          // Use sample data
-          setCategories(sampleCategories);
-          setCurrentBudget({
-            totalBudget: 8300,
-            categoryBudgets: sampleCategories.map(cat => ({
-              categoryId: cat.id,
-              amount: cat.budget,
-            })),
-            savingsGoal: 1000,
-          });
-        }
-      })
-      .catch((err) => {
-        console.error('Error loading data:', err);
-        // Use sample data as fallback
+        // For categories and budget, use static/sample data for now
+        setCategories(sampleCategories);
+        setCurrentBudget({
+          totalBudget: 8300,
+          categoryBudgets: sampleCategories.map(cat => ({
+            categoryId: cat.id,
+            amount: cat.budget,
+          })),
+          savingsGoal: 1000,
+        });
+      } catch (err) {
         setExpenses(sampleExpenses);
         setCategories(sampleCategories);
         setCurrentBudget({
@@ -126,39 +99,34 @@ const Expenses: React.FC = () => {
           })),
           savingsGoal: 1000,
         });
-        
-        // Show specific error message
-        if (err.response?.status === 401) {
-          setError('Authentication failed. Please log in again.');
-        } else if (err.message?.includes('Not authenticated')) {
-          setError('Please log in to view expenses.');
-        } else {
-          setError('Using sample data. Backend connection failed.');
-        }
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
   }, [user, showAddExpenseModal, showBudgetModal]);
 
   const handleSaveExpense = async (expenseData: ExpenseData) => {
     try {
-      // Remove userId if present
-      const { userId, ...expenseWithoutUserId } = expenseData as any;
-      await addExpense(expenseWithoutUserId);
-      setShowAddExpenseModal(false);
-      // Refetch data
-      setLoading(true);
-      const res = await getExpenses();
-      setExpenses(res.data);
-      setLoading(false);
-    } catch (err: any) {
-      console.error('Error adding expense:', err);
-      if (err.response?.status === 401) {
-        setError('Authentication failed. Please log in again.');
-      } else if (err.message?.includes('Not authenticated')) {
+      if (!user) {
         setError('Please log in to add expenses.');
-      } else {
-        setError(`Failed to add expense: ${err.message || 'Unknown error'}`);
+        return;
       }
+      await expenseAPI.createExpense({
+        userId: user.uid,
+        ...expenseData,
+        date: new Date(expenseData.date),
+      });
+      setShowAddExpenseModal(false);
+      setSuccess('Expense added successfully!');
+      setTimeout(() => setSuccess(null), 3000);
+      setLoading(true);
+      const { expenses: res } = await expenseAPI.getExpenses(user.uid);
+      setExpenses(res);
+      setLoading(false);
+    } catch (err) {
+      setError('Failed to add expense.');
     }
   };
 
@@ -167,12 +135,12 @@ const Expenses: React.FC = () => {
     // Optionally refetch budgets
   };
 
-  // Calculate totals
+  // Calculate totals from localStorage data
+  const totalSpent = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
   const totalBudget = currentBudget?.totalBudget || 0;
-  const totalSpent = categories.reduce((sum, cat) => sum + cat.spent, 0);
   const budgetPercentage = totalBudget ? Math.round((totalSpent / totalBudget) * 100) : 0;
   const potentialSavings = totalBudget - totalSpent;
-  const currentSavings = 450; // Placeholder
+  const currentSavings = 450; // Placeholder, update if you want to calculate from local data
 
   // Prepare data for charts
   const expenseData = expenses.map((e) => ({
@@ -218,6 +186,23 @@ const Expenses: React.FC = () => {
   return (
     <div className="p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Local Storage Banner */}
+        <div className="mb-4 p-3 bg-primary-100 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-800 rounded-lg flex items-center gap-3">
+          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary-600/10">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="10" rx="4" fill="#6366F1" fillOpacity="0.2"/><rect x="8" y="3" width="8" height="4" rx="2" fill="#6366F1" fillOpacity="0.2"/><circle cx="8.5" cy="12" r="1.5" fill="#6366F1"/><circle cx="15.5" cy="12" r="1.5" fill="#6366F1"/></svg>
+          </span>
+          <span className="text-primary-700 dark:text-primary-300 font-medium">You are viewing expenses stored locally in your browser (local server mode).</span>
+        </div>
+        {/* Success Message */}
+        {success && (
+          <div className="mb-4 p-4 bg-success-100 dark:bg-success-900/30 border border-success-200 dark:border-success-800 rounded-lg">
+            <div className="flex items-center">
+              <div className="text-success-600 dark:text-success-400 text-lg mr-2">✓</div>
+              <span className="text-success-800 dark:text-success-200">{success}</span>
+            </div>
+          </div>
+        )}
+        
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold mb-2">Expense Tracker</h1>
@@ -496,6 +481,59 @@ const Expenses: React.FC = () => {
               </div>
             </div>
           </div>
+        </motion.div>
+
+        {/* Recent Expenses List */}
+        <motion.div 
+          className="card"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold">Recent Expenses</h2>
+            <button 
+              onClick={() => setShowAddExpenseModal(true)}
+              className="btn btn-outline btn-sm flex items-center gap-2"
+            >
+              <Plus size={16} />
+              Add New
+            </button>
+          </div>
+          
+          {expenses.length === 0 ? (
+            <div className="text-center py-8 text-surface-500">
+              <p>No expenses recorded yet.</p>
+              <p className="text-sm mt-2">Start tracking your expenses by adding your first one!</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {expenses.slice(0, 10).map((expense: any) => (
+                <div key={expense._id || expense.id} className="flex items-center justify-between p-4 bg-surface-50 dark:bg-surface-800 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-3 h-3 rounded-full"
+                      style={{ 
+                        backgroundColor: categories.find(cat => cat.id === expense.category)?.color || '#4F46E5' 
+                      }}
+                    ></div>
+                    <div>
+                      <p className="font-medium">{expense.description}</p>
+                      <p className="text-sm text-surface-600 dark:text-surface-400">
+                        {categories.find(cat => cat.id === expense.category)?.name || expense.category} • {expense.paymentMethod}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold">₹{expense.amount.toFixed(2)}</p>
+                    <p className="text-sm text-surface-600 dark:text-surface-400">
+                      {new Date(expense.date).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </motion.div>
 
         {/* Add Expense Modal */}

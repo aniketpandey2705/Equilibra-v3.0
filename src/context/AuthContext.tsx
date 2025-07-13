@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { auth, googleProvider, createOrFetchUserInBackend } from '../lib/api';
 import {
   createUserWithEmailAndPassword,
@@ -20,6 +20,30 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// JournalEntriesContext for real-time updates
+interface JournalEntriesContextType {
+  refreshToken: number;
+  triggerRefresh: () => void;
+}
+
+const JournalEntriesContext = createContext<JournalEntriesContextType | undefined>(undefined);
+
+export const JournalEntriesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [refreshToken, setRefreshToken] = useState(0);
+  const triggerRefresh = useCallback(() => setRefreshToken(t => t + 1), []);
+  return (
+    <JournalEntriesContext.Provider value={{ refreshToken, triggerRefresh }}>
+      {children}
+    </JournalEntriesContext.Provider>
+  );
+};
+
+export const useJournalEntries = () => {
+  const ctx = useContext(JournalEntriesContext);
+  if (!ctx) throw new Error('useJournalEntries must be used within JournalEntriesProvider');
+  return ctx;
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);

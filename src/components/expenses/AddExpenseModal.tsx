@@ -25,11 +25,21 @@ interface Category {
 const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSave, categories }) => {
   const [expenseData, setExpenseData] = useState<ExpenseData>({
     amount: 0,
-    category: categories[0]?.id || '',
+    category: '',
     description: '',
     date: new Date().toISOString().split('T')[0],
     paymentMethod: 'card',
   });
+
+  // Update category when categories prop changes
+  React.useEffect(() => {
+    if (categories.length > 0 && !expenseData.category) {
+      setExpenseData(prev => ({
+        ...prev,
+        category: categories[0]?.id || ''
+      }));
+    }
+  }, [categories, expenseData.category]);
 
   const [errors, setErrors] = useState<Partial<Record<keyof ExpenseData, string>>>({});
 
@@ -165,9 +175,11 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSa
                 onChange={handleChange}
                 className="input w-full"
               >
-                <option value="card">Card</option>
+                <option value="card">Credit/Debit Card</option>
                 <option value="cash">Cash</option>
                 <option value="transfer">Bank Transfer</option>
+                <option value="upi">UPI</option>
+                <option value="wallet">Digital Wallet</option>
                 <option value="other">Other</option>
               </select>
             </div>

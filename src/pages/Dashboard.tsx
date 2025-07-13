@@ -140,6 +140,23 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="p-6 bg-gradient-to-br from-surface-50 to-surface-100 dark:from-surface-900 dark:to-surface-800 min-h-screen">
+      {/* BriLow Banner */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between bg-primary-600 text-white rounded-xl px-6 py-4 shadow-lg">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/10">
+              <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="10" rx="4" fill="#fff" fillOpacity="0.2"/><rect x="8" y="3" width="8" height="4" rx="2" fill="#fff" fillOpacity="0.2"/><circle cx="8.5" cy="12" r="1.5" fill="#fff"/><circle cx="15.5" cy="12" r="1.5" fill="#fff"/></svg>
+            </span>
+            <span className="font-semibold text-lg">Talk to BriLow (chatbot) to navigate all these features</span>
+          </div>
+          <button
+            className="bg-white text-primary-700 font-semibold px-5 py-2 rounded-lg shadow hover:bg-primary-50 transition"
+            onClick={() => setIsChatbotOpen(true)}
+          >
+            Chat Now
+          </button>
+        </div>
+      </div>
       <motion.div 
         className="mb-8"
         initial={{ opacity: 0, y: -20 }}

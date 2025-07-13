@@ -3,60 +3,51 @@ import { motion } from 'framer-motion';
 import { Activity } from '../../types';
 import { Clock, User } from 'lucide-react';
 
-const activities: Activity[] = [
+// Replace activities array with expenses
+const expenses = [
   {
     id: '1',
-    user: {
-      name: 'Emma Smith',
-      avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'
-    },
-    action: 'completed task',
-    target: 'Website redesign',
-    time: '2 hours ago'
+    amount: 1200,
+    category: 'Food',
+    description: 'Lunch at restaurant',
+    date: '2 hours ago',
+    paymentMethod: 'Card',
   },
   {
     id: '2',
-    user: {
-      name: 'Alex Johnson',
-      avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'
-    },
-    action: 'commented on',
-    target: 'Mobile app development',
-    time: '3 hours ago'
+    amount: 500,
+    category: 'Transport',
+    description: 'Taxi ride',
+    date: '3 hours ago',
+    paymentMethod: 'Cash',
   },
   {
     id: '3',
-    user: {
-      name: 'Sarah Wilson',
-      avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'
-    },
-    action: 'created project',
-    target: 'New marketing campaign',
-    time: '5 hours ago'
+    amount: 2000,
+    category: 'Shopping',
+    description: 'Bought new shoes',
+    date: '5 hours ago',
+    paymentMethod: 'UPI',
   },
   {
     id: '4',
-    user: {
-      name: 'Michael Brown',
-      avatar: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'
-    },
-    action: 'uploaded document',
-    target: 'Q2 Financial Report',
-    time: '6 hours ago'
+    amount: 350,
+    category: 'Groceries',
+    description: 'Supermarket',
+    date: '6 hours ago',
+    paymentMethod: 'Card',
   },
   {
     id: '5',
-    user: {
-      name: 'Jessica Lee',
-      avatar: 'https://images.pexels.com/photos/1036623/pexels-photo-1036623.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'
-    },
-    action: 'assigned task to',
-    target: 'John Doe',
-    time: '8 hours ago'
-  }
+    amount: 800,
+    category: 'Entertainment',
+    description: 'Movie tickets',
+    date: '8 hours ago',
+    paymentMethod: 'Wallet',
+  },
 ];
 
-const ActivityPanel: React.FC = () => {
+const ExpensesPanel: React.FC = () => {
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -75,54 +66,45 @@ const ActivityPanel: React.FC = () => {
   return (
     <div className="card h-full">
       <div className="flex items-center justify-between mb-5">
-        <h2 className="text-lg font-semibold">Recent Activity</h2>
+        <h2 className="text-lg font-semibold">Recent Expenses</h2>
         <div className="flex items-center text-sm text-surface-500">
-          <Clock size={14} className="mr-1" />
           <span>Today</span>
         </div>
       </div>
-      
       <motion.div 
         className="space-y-4"
         variants={container}
         initial="hidden"
         animate="show"
       >
-        {activities.map((activity) => (
+        {expenses.map((expense) => (
           <motion.div 
-            key={activity.id}
+            key={expense.id}
             className="flex items-start gap-3 pb-4 border-b border-surface-200 dark:border-surface-700 last:border-0"
             variants={item}
           >
-            <div className="flex-shrink-0 w-8 h-8">
-              <img 
-                src={activity.user.avatar} 
-                alt={activity.user.name} 
-                className="w-full h-full rounded-full object-cover"
-              />
+            <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-accent-100 dark:bg-accent-900/30">
+              <span className="font-bold text-accent-600 dark:text-accent-400">₹{expense.amount}</span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm">
-                <span className="font-medium">{activity.user.name}</span>
-                <span className="text-surface-600 dark:text-surface-400"> {activity.action} </span>
-                <span className="font-medium">{activity.target}</span>
+                <span className="font-medium">{expense.category}</span>
+                <span className="text-surface-600 dark:text-surface-400"> — {expense.description}</span>
               </p>
               <div className="flex items-center mt-1 text-xs text-surface-500">
-                <Clock size={12} className="mr-1" />
-                <span>{activity.time}</span>
+                <span>{expense.paymentMethod} • {expense.date}</span>
               </div>
             </div>
           </motion.div>
         ))}
       </motion.div>
-      
       <div className="mt-4 pt-4 border-t border-surface-200 dark:border-surface-700">
         <button className="w-full py-2 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">
-          View all activity
+          View all expenses
         </button>
       </div>
     </div>
   );
 };
 
-export default ActivityPanel;
+export default ExpensesPanel;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Filter, Calendar, Tag, Edit, Trash2, Eye, Brain, Sparkles } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, useJournalEntries } from '../context/AuthContext';
 import { journalAPI } from '../lib/api';
 import { geminiService } from '../lib/geminiService';
 import EntryDetailModal from '../components/EntryDetailModal';
@@ -33,6 +33,7 @@ const Entries: React.FC = () => {
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { user } = useAuth();
+  const { triggerRefresh } = useJournalEntries();
 
   const categories = ['all', 'Personal', 'Work', 'Goals', 'Reflection', 'Gratitude', 'Dreams'];
 
@@ -66,6 +67,7 @@ const Entries: React.FC = () => {
     try {
       await journalAPI.deleteEntry(entryId);
       setEntries(entries.filter(entry => entry.id !== entryId));
+      triggerRefresh(); // Notify analytics/dashboard
     } catch (error) {
       console.error('Error deleting entry:', error);
     }

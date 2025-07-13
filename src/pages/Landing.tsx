@@ -241,6 +241,7 @@ const Landing: React.FC = () => {
       <section className="relative z-10 px-6 py-20">
         <div className="max-w-4xl mx-auto text-center">
           <motion.div
+            className="bg-white/10 backdrop-blur-lg rounded-2xl p-10 border border-white/20 shadow-xl"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
@@ -260,6 +261,46 @@ const Landing: React.FC = () => {
           </motion.div>
         </div>
       </section>
+
+      {/* Testimonial Carousel */}
+      <section className="relative z-10 px-6 py-16 bg-white/5 backdrop-blur-sm border-t border-white/10">
+        <div className="max-w-4xl mx-auto text-center">
+          <h3 className="text-2xl font-bold text-white mb-8">What our users say</h3>
+          <div className="flex flex-col md:flex-row gap-8 items-center justify-center">
+            <div className="bg-white/10 rounded-xl p-6 border border-white/20 max-w-xs">
+              <p className="text-white/80 mb-3">“Equilibria has completely changed the way I track my goals and mood. The analytics are so insightful!”</p>
+              <span className="text-primary-400 font-semibold">— Priya S.</span>
+            </div>
+            <div className="bg-white/10 rounded-xl p-6 border border-white/20 max-w-xs">
+              <p className="text-white/80 mb-3">“The journaling prompts and BriLow chatbot make it so easy to stay consistent. Love the design!”</p>
+              <span className="text-accent-400 font-semibold">— Alex R.</span>
+            </div>
+            <div className="bg-white/10 rounded-xl p-6 border border-white/20 max-w-xs">
+              <p className="text-white/80 mb-3">“Expense tracking and academic features in one place? Game changer for students!”</p>
+              <span className="text-secondary-400 font-semibold">— Maya T.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="relative z-20 px-6 py-10 bg-surface-900 border-t border-white/10 mt-10">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-2 mb-4 md:mb-0">
+            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+              <span className="text-primary-600 font-bold text-lg">E</span>
+            </div>
+            <span className="text-white text-xl font-semibold">Equilibria</span>
+          </div>
+          <div className="flex gap-6 text-white/70 text-sm">
+            <a href="https://twitter.com/" target="_blank" rel="noopener noreferrer" className="hover:text-primary-400 transition">Twitter</a>
+            <a href="https://github.com/" target="_blank" rel="noopener noreferrer" className="hover:text-primary-400 transition">GitHub</a>
+            <a href="mailto:support@equilibria.com" className="hover:text-primary-400 transition">Contact</a>
+          </div>
+          <div className="text-white/50 text-xs">© {new Date().getFullYear()} Equilibria. All rights reserved.</div>
+        </div>
+        <div className="mt-6 text-center text-white/60 text-sm">Empowering your productivity journey with AI ✨</div>
+      </footer>
     </div>
   );
 };
